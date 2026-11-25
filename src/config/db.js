@@ -6,7 +6,7 @@ dns.setServers(["8.8.8.8", "8.8.4.4"])
 
 const ConnectDb = async () => {
     try{
-       await mongoose.connect("mongodb+srv://javlonaxrorov2010_db_user:ET0YDuybJSHZrOGx@cluster0.nqkfdma.mongodb.net/") 
+       await mongoose.connect(process.env.MONGO_URI) 
        console.log('MongoDB ishladi');
     } catch (e){
         console.log(e.message);
