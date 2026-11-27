@@ -30,8 +30,9 @@ npm run dev            # http://localhost:8000
 | POST | `/user/login` | `{ email, password }` | `{ user, token }` |
 | GET | `/user/me` | — | `{ user }` |
 | PATCH | `/user/me` | FormData: `fullName`, `bio`, `avatar` (fayl) — hammasi ixtiyoriy | `{ user }` |
+| PATCH | `/user/me/note` | `{ text }` — 60 belgigacha, bo'sh matn zametkani olib tashlaydi | `{ user }` (`user.note = { text, expiresAt }`, 24 soat) |
 | GET | `/user/search?q=ali` | — | `{ users: [{ _id, username, fullName, avatar, followersCount, isFollowing }] }` |
-| GET | `/user/:username` | — | `{ user: { _id, username, fullName, bio, avatar, postsCount, followersCount, followingCount, isFollowing, isMe } }` |
+| GET | `/user/:username` | — | `{ user: { _id, username, fullName, bio, avatar, postsCount, followersCount, followingCount, isFollowing, isMe, note: { text, expiresAt } \| null } }` |
 | GET | `/user/:username/posts` | — | `{ posts: [Post] }` |
 | GET | `/user/:username/followers` | — | `{ users: [{ _id, username, fullName, avatar }] }` |
 | GET | `/user/:username/following` | — | `{ users: [...] }` |
@@ -68,7 +69,7 @@ npm run dev            # http://localhost:8000
 
 ## Istoriya — `/stories`
 
-Istoriya 24 soatdan keyin o'zi o'chadi. Ikki turi bor: `image` (o'z rasmi) va `repost` (boshqaning postini
+Istoriya 24 soatdan keyin lentadan yo'qoladi, lekin egasining arxivida qoladi (o'chirilmaguncha). Ikki turi bor: `image` (o'z rasmi) va `repost` (boshqaning postini
 istoriyada reklama qilish — `post.author` o'sha post egasi).
 
 **Story** ko'rinishi: `{ _id, type, image, post: { _id, author } | null, viewed, viewersCount, createdAt, expiresAt }`
@@ -77,12 +78,25 @@ istoriyada reklama qilish — `post.author` o'sha post egasi).
 | Metod | Yo'l | Body | Javob |
 |---|---|---|---|
 | GET | `/stories` | — | `{ groups: [{ user, stories: [Story], allViewed }] }` — story bar uchun, o'zingizniki birinchi |
-| POST | `/stories` | FormData: `image` (fayl) | `{ story }` |
+| POST | `/stories` | FormData: `image` (fayl); ixtiyoriy `highlightId` (bor highlight'ga) yoki `highlightName` (yangi highlight) | `{ story, highlight \| null }` |
 | POST | `/stories/repost/:postId` | — | `{ story }` |
 | GET | `/stories/user/:userId` | — | `{ stories: [Story] }` |
 | POST | `/stories/:id/view` | — | `{ viewed: true }` — istoriya ochilganda chaqiring |
 | GET | `/stories/:id/viewers` | — | `{ viewers: [user] }` — faqat egasi |
-| DELETE | `/stories/:id` | — | faqat egasi |
+| DELETE | `/stories/:id` | — | faqat egasi; arxivdan ham, highlight'lardan ham o'chadi |
+
+### Arxiv va highlight (Aktualniy)
+
+**Highlight** ko'rinishi: `{ _id, name, storyIds: [id], createdAt }`.
+
+| Metod | Yo'l | Body | Javob |
+|---|---|---|---|
+| GET | `/stories/archive` | — | `{ stories: [Story] }` — o'z istoriyalaringiz, eskilari ham, yangisi birinchi |
+| GET | `/stories/archive/:id/image` | — | rasm fayli; token kerak (`fetch` + `blob`). Egasi yoki istoriya highlight'da bo'lsa hamma |
+| GET | `/stories/highlights` | `?username=ali` ixtiyoriy | `{ highlights: [Highlight] }` — username bo'lmasa o'zingizniki |
+| POST | `/stories/highlights` | `{ name, storyIds }` | `{ highlight }` |
+| POST | `/stories/highlights/:id/stories` | `{ storyIds }` | `{ highlight }` — bor highlight'ga qo'shish |
+| DELETE | `/stories/highlights/:id` | — | highlight o'chadi, istoriyalar arxivda qoladi |
 
 ## Bildirishnoma — `/notifications`
 
@@ -96,6 +110,31 @@ Like, izoh, follow va repost bo'lganda avtomatik yaratiladi (o'zingizning haraka
 | PATCH | `/notifications/:id/read` | bittasini o'qilgan qilish |
 
 `type`: `like` | `comment` (`text` — izoh matni) | `follow` | `repost`.
+
+## Reels — `/reels`
+
+Video MongoDB GridFS'da saqlanadi (`reels.files`, `reels.chunks`). Chegara: **15 MB**, mp4 / webm / mov
+(Atlas bepul tarifida jami 512 MB joy bor).
+
+**Reel** ko'rinishi: `{ _id, videoUrl, caption, author, isFollowingAuthor, isMine, likesCount, isLiked, savesCount,
+isSaved, repostsCount, isReposted, commentsCount, createdAt }`. Video: `<video src={API_URL + reel.videoUrl}>`.
+
+| Metod | Yo'l | Body | Javob |
+|---|---|---|---|
+| GET | `/reels?page=1&limit=10` | — | `{ reels: [Reel], page, hasMore }` — yangisi birinchi |
+| POST | `/reels` | FormData: `video` (fayl), `caption` | `{ reel }` |
+| GET | `/reels/:id` | — | `{ reel }` |
+| GET | `/reels/:id/video` | — | video fayli (tokensiz, `Range` qo'llanadi — orqaga/oldinga surish ishlaydi) |
+| DELETE | `/reels/:id` | — | faqat egasi; video va izohlar ham o'chadi |
+| POST | `/reels/:id/like` | — | `{ isLiked, likesCount }` |
+| POST | `/reels/:id/save` | — | `{ isSaved, savesCount }` |
+| POST | `/reels/:id/repost` | — | `{ isReposted, repostsCount }` — profildagi "Repostlar"ga qo'shadi |
+| GET | `/reels/:id/comments` | — | `{ comments: [{ _id, text, author, createdAt }] }` |
+| POST | `/reels/:id/comments` | `{ text }` | `{ comment, commentsCount }` |
+| DELETE | `/reels/:id/comments/:commentId` | — | izoh egasi yoki reel egasi |
+| GET | `/reels/user/:username?type=own` | `type`: `own` \| `saved` \| `reposts` | `{ reels: [Reel] }` — `saved` faqat o'zingizniki |
+
+Like/save/repost bosilsa yoqadi, yana bosilsa bekor qiladi.
 
 ## Rasm — `/images`
 

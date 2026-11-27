@@ -3,7 +3,8 @@ const multer = require("multer")
 // Express 5 sends errors from async controllers here automatically
 const errorHandler = (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
-        const message = err.code === "LIMIT_FILE_SIZE" ? "rasm 5 MB dan katta bo'lmasin" : err.message
+        const tooBig = err.field === "video" ? "video 15 MB dan katta bo'lmasin" : "rasm 5 MB dan katta bo'lmasin"
+        const message = err.code === "LIMIT_FILE_SIZE" ? tooBig : err.message
         return res.status(400).json({ message })
     }
     if (err.name === "CastError") {

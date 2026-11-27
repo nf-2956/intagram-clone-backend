@@ -9,8 +9,8 @@ const storyModel = new mongoose.Schema({
     image: { type: String, required: true }, // "/images/<id>" (for repost: the post's image)
     post: { type: mongoose.Schema.Types.ObjectId, ref: "InstaPost", default: null },
     viewers: [{ type: mongoose.Schema.Types.ObjectId, ref: "InstaUser" }],
-    // MongoDB removes the document automatically after this time (TTL index)
-    expiresAt: { type: Date, default: () => new Date(Date.now() + DAY), index: { expires: 0 } },
+    // After this time the story leaves the feed but stays in the owner's archive
+    expiresAt: { type: Date, default: () => new Date(Date.now() + DAY), index: true },
 }, { timestamps: true })
 
 module.exports = mongoose.model("InstaStory", storyModel)

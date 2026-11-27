@@ -21,6 +21,7 @@ app.use("/posts", require("./router/postRouter"))
 app.use("/stories", require("./router/storyRouter"))
 app.use("/notifications", require("./router/notificationRouter"))
 app.use("/images", require("./router/imageRouter"))
+app.use("/reels", require("./router/reelRouter"))
 
 app.use((req, res) => res.status(404).json({ message: "bunday yo'l yo'q" }))
 app.use(errorHandler)

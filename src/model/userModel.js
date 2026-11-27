@@ -25,6 +25,11 @@ const userModel = new mongoose.Schema({
     avatar: { type: String, default: "" },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "InstaUser" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "InstaUser" }],
+    // short profile note, visible for 24 hours
+    note: {
+        text: { type: String, default: "", maxlength: 60 },
+        expiresAt: { type: Date, default: null },
+    },
 }, { timestamps: true })
 
 module.exports = mongoose.model("InstaUser", userModel)

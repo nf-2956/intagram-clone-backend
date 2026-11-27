@@ -95,6 +95,26 @@ const updateMe = async (req, res) => {
     res.json({ message: "profil yangilandi", user: publicUser(user) })
 }
 
+// PATCH /user/me/note  { text }  - empty text removes the note
+const updateNote = async (req, res) => {
+    const text = typeof req.body.text === "string" ? req.body.text.trim() : ""
+    if (text.length > 60) throw httpError(400, "zametka 60 belgidan oshmasin")
+
+    const user = await userModel.findById(req.userId)
+    if (!user) throw httpError(404, "user topilmadi")
+    user.note = text
+        ? { text, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }
+        : { text: "", expiresAt: null }
+    await user.save()
+    res.json({ message: text ? "zametka qo'yildi" : "zametka olib tashlandi", user: publicUser(user) })
+}
+
+// Note is shown only while it has not expired
+const activeNote = (user) =>
+    user.note?.text && user.note.expiresAt > new Date()
+        ? { text: user.note.text, expiresAt: user.note.expiresAt }
+        : null
+
 // GET /user/search?q=ali
 const searchUsers = async (req, res) => {
     const q = (req.query.q || "").trim()
@@ -137,6 +157,7 @@ const getProfile = async (req, res) => {
             followingCount: user.following.length,
             isFollowing: user.followers.some((id) => isSame(id, req.userId)),
             isMe: isSame(user._id, req.userId),
+            note: activeNote(user),
         },
     })
 }
@@ -181,6 +202,6 @@ const toggleFollow = async (req, res) => {
 }
 
 module.exports = {
-    register, login, getAllusers, getMe, updateMe, searchUsers,
+    register, login, getAllusers, getMe, updateMe, updateNote, searchUsers,
     getProfile, getUserPosts, getFollowList, toggleFollow,
 }

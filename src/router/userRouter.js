@@ -10,6 +10,7 @@ router.get("/users", c.getAllusers)
 
 router.get("/me", auth, c.getMe)
 router.patch("/me", auth, upload.single("avatar"), c.updateMe)
+router.patch("/me/note", auth, c.updateNote)
 router.get("/search", auth, c.searchUsers)
 router.post("/:id/follow", auth, c.toggleFollow)
 
